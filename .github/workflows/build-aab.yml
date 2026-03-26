@@ -59,10 +59,10 @@ jobs:
           }
           EOF
 
-      - name: Create TWA manifest
+      - name: Create TWA manifest and checksum
         run: |
           mkdir twa-project
-          cat > twa-project/twa-manifest.json << EOF
+          cat > twa-project/twa-manifest.json << 'EOF'
           {
             "packageId": "com.bookmyclinic.app",
             "host": "bookmyclinics.com",
@@ -101,6 +101,12 @@ jobs:
             "fingerprints": []
           }
           EOF
+          
+          # Generate checksum file to prevent interactive prompt
+          cd twa-project
+          MANIFEST_CONTENT=$(cat twa-manifest.json)
+          CHECKSUM=$(echo -n "$MANIFEST_CONTENT" | sha256sum | awk '{print $1}')
+          echo "{\"twaManifest\": \"$CHECKSUM\"}" > .checksum
 
       - name: Build AAB non-interactive
         run: |
