@@ -98,7 +98,7 @@ jobs:
             "enableSiteSettingsShortcut": true,
             "isChromeOSOnly": false,
             "isMetaQuest": false,
-            "minSdkVersion": 19,
+            "minSdkVersion": 21,
             "orientation": "default",
             "fingerprints": []
           }
