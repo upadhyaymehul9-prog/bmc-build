@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
@@ -24,10 +24,25 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Generate signing keystore
+        run: |
+          mkdir -p keystore
+          keytool -genkey -v \
+            -keystore keystore/bookmyclinic.keystore \
+            -alias bookmyclinic \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
+            -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
+            -dname "CN=BookMyClinic Admin, OU=Engineering, O=BookMyClinic, L=Ankleshwar, ST=Gujarat, C=IN"
+
       - name: Initialize TWA project
         run: |
-          mkdir twa-project && cd twa-project
-          bubblewrap init --manifest=https://bookmyclinics.com/manifest.json \
+          mkdir twa-project
+          cd twa-project
+          bubblewrap init \
+            --manifest=https://bookmyclinics.com/manifest.json \
             --packageId=com.bookmyclinic.app \
             --name="BookMyClinic" \
             --shortName="BookMyClinic" \
@@ -45,26 +60,13 @@ jobs:
             --signingKeyStorePassword=${{ secrets.KEYSTORE_PASSWORD }} \
             --skipPwaValidation
 
-      - name: Generate signing keystore
-        run: |
-          mkdir -p keystore
-          keytool -genkey -v \
-            -keystore keystore/bookmyclinic.keystore \
-            -alias bookmyclinic \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -dname "CN=BookMyClinic Admin, OU=Engineering, O=BookMyClinic, L=Ankleshwar, ST=Gujarat, C=IN"
-
       - name: Build AAB
         run: |
           cd twa-project
           bubblewrap build --skipPwaValidation
 
       - name: Upload AAB artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: BookMyClinic-v2-AAB
           path: twa-project/app-release-bundle.aab
