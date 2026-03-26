@@ -45,9 +45,11 @@ jobs:
 
       - name: Initialize TWA project
         run: |
+          JAVA_HOME_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+          echo "Java home: $JAVA_HOME_PATH"
           mkdir twa-project
           cd twa-project
-          echo "n" | bubblewrap init \
+          printf "n\n$JAVA_HOME_PATH\n" | bubblewrap init \
             --manifest=https://bookmyclinics.com/manifest.json \
             --packageId=com.bookmyclinic.app \
             --name="BookMyClinic" \
@@ -69,7 +71,7 @@ jobs:
       - name: Build AAB
         run: |
           cd twa-project
-          echo "n" | bubblewrap build --skipPwaValidation
+          bubblewrap build --skipPwaValidation
 
       - name: Find AAB file
         run: find . -name "*.aab" 2>/dev/null || echo "No AAB found"
