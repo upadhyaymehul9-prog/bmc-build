@@ -8,6 +8,8 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+  BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+  BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
 jobs:
   build:
@@ -110,13 +112,9 @@ jobs:
       - name: Build AAB non-interactive
         run: |
           cd twa-project
-          bubblewrap build \
-            --skipPwaValidation \
-            --skipSigningPrompt \
+          bubblewrap build --skipPwaValidation \
             --signingKeyPath=../keystore/bookmyclinic.keystore \
-            --signingKeyAlias=bookmyclinic \
-            --signingKeyPassword="${{ secrets.KEYSTORE_PASSWORD }}" \
-            --signingKeyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}"
+            --signingKeyAlias=bookmyclinic
 
       - name: Find AAB file
         run: find . -name "*.aab" 2>/dev/null || echo "No AAB found"
