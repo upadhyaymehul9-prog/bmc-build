@@ -102,11 +102,9 @@ jobs:
           }
           EOF
           
-          # Generate checksum file to prevent interactive prompt
-          cd twa-project
-          MANIFEST_CONTENT=$(cat twa-manifest.json)
-          CHECKSUM=$(echo -n "$MANIFEST_CONTENT" | sha256sum | awk '{print $1}')
-          echo "{\"twaManifest\": \"$CHECKSUM\"}" > .checksum
+          # Generate SHA1 checksum exactly as Bubblewrap expects
+          sha1sum twa-project/twa-manifest.json | awk '{print $1}' > twa-project/manifest-checksum.txt
+          echo "Checksum generated: $(cat twa-project/manifest-checksum.txt)"
 
       - name: Build AAB non-interactive
         run: |
