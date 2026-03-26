@@ -5,9 +5,13 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -20,9 +24,11 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
 
       - name: Install Bubblewrap
-        run: npm install -g @bubblewrap/cli
+        run: npm install -g @bubblewrap/cli --prefer-online
 
       - name: Generate signing keystore
         run: |
@@ -33,15 +39,15 @@ jobs:
             -keyalg RSA \
             -keysize 2048 \
             -validity 10000 \
-            -storepass ${{ secrets.KEYSTORE_PASSWORD }} \
-            -keypass ${{ secrets.KEYSTORE_PASSWORD }} \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -dname "CN=BookMyClinic Admin, OU=Engineering, O=BookMyClinic, L=Ankleshwar, ST=Gujarat, C=IN"
 
       - name: Initialize TWA project
         run: |
           mkdir twa-project
           cd twa-project
-          bubblewrap init \
+          echo "n" | bubblewrap init \
             --manifest=https://bookmyclinics.com/manifest.json \
             --packageId=com.bookmyclinic.app \
             --name="BookMyClinic" \
@@ -56,18 +62,24 @@ jobs:
             --appVersionName=1.0.1 \
             --signingKeyPath=../keystore/bookmyclinic.keystore \
             --signingKeyAlias=bookmyclinic \
-            --signingKeyPassword=${{ secrets.KEYSTORE_PASSWORD }} \
-            --signingKeyStorePassword=${{ secrets.KEYSTORE_PASSWORD }} \
+            --signingKeyPassword="${{ secrets.KEYSTORE_PASSWORD }}" \
+            --signingKeyStorePassword="${{ secrets.KEYSTORE_PASSWORD }}" \
             --skipPwaValidation
 
       - name: Build AAB
         run: |
           cd twa-project
-          bubblewrap build --skipPwaValidation
+          echo "n" | bubblewrap build --skipPwaValidation
+
+      - name: Find AAB file
+        run: find . -name "*.aab" 2>/dev/null || echo "No AAB found"
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
           name: BookMyClinic-v2-AAB
-          path: twa-project/app-release-bundle.aab
+          path: |
+            twa-project/**/*.aab
+            twa-project/app-release-bundle.aab
           retention-days: 7
+          if-no-files-found: warn
