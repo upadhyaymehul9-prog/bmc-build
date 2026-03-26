@@ -7,6 +7,7 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
 
 jobs:
   build:
@@ -43,13 +44,22 @@ jobs:
             -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -dname "CN=BookMyClinic Admin, OU=Engineering, O=BookMyClinic, L=Ankleshwar, ST=Gujarat, C=IN"
 
+      - name: Create Bubblewrap config
+        run: |
+          mkdir -p ~/.bubblewrap
+          cat > ~/.bubblewrap/config.json << EOF
+          {
+            "jdkPath": "/usr/lib/jvm/temurin-17-jdk-amd64",
+            "androidSdkPath": "$ANDROID_SDK_ROOT"
+          }
+          EOF
+          cat ~/.bubblewrap/config.json
+
       - name: Initialize TWA project
         run: |
-          JAVA_HOME_PATH=$(dirname $(dirname $(readlink -f $(which java))))
-          echo "Java home: $JAVA_HOME_PATH"
           mkdir twa-project
           cd twa-project
-          printf "n\n$JAVA_HOME_PATH\n" | bubblewrap init \
+          bubblewrap init \
             --manifest=https://bookmyclinics.com/manifest.json \
             --packageId=com.bookmyclinic.app \
             --name="BookMyClinic" \
