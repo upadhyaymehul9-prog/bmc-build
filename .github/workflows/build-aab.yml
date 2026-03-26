@@ -96,11 +96,15 @@ jobs:
             "fingerprints": []
           }
           EOF
+          
+          # Generate checksum to prevent regenerate prompt
+          cd twa-project
+          bubblewrap updateWebManifest || true
 
       - name: Build AAB
         run: |
           cd twa-project
-          bubblewrap build \
+          echo "no" | bubblewrap build \
             --signingKeyPath=../keystore/bookmyclinic.keystore \
             --signingKeyAlias=bookmyclinic \
             --signingKeyPassword="${{ secrets.KEYSTORE_PASSWORD }}" \
@@ -113,7 +117,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: BookMyClinic-v2-AAB
-          path: |
-            twa-project/**/*.aab
+          path: twa-project/**/*.aab
           retention-days: 7
           if-no-files-found: warn
