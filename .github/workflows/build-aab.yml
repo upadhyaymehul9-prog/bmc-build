@@ -59,7 +59,7 @@ jobs:
           }
           EOF
 
-      - name: Create TWA manifest and checksum
+      - name: Create TWA manifest
         run: |
           mkdir twa-project
           cat > twa-project/twa-manifest.json << 'EOF'
@@ -101,10 +101,11 @@ jobs:
             "fingerprints": []
           }
           EOF
-          
-          # Generate SHA1 checksum exactly as Bubblewrap expects
-          sha1sum twa-project/twa-manifest.json | awk '{print $1}' > twa-project/manifest-checksum.txt
-          echo "Checksum generated: $(cat twa-project/manifest-checksum.txt)"
+
+      - name: Generate Android project via bubblewrap update
+        run: |
+          cd twa-project
+          bubblewrap update --skipVersionUpgrade
 
       - name: Build AAB non-interactive
         run: |
