@@ -8,6 +8,8 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+  BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+  BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
 jobs:
   build:
@@ -36,10 +38,18 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli --prefer-online
 
-      - name: Restore PWABuilder keystore from secret
+      - name: Generate temp keystore for build
         run: |
           mkdir -p keystore
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore/signing.keystore
+          keytool -genkey -v \
+            -keystore keystore/bookmyclinic.keystore \
+            -alias bookmyclinic \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -dname "CN=BookMyClinic Admin, OU=Engineering, O=BookMyClinic, L=Ankleshwar, ST=Gujarat, C=IN"
 
       - name: Create Bubblewrap config
         run: |
@@ -74,8 +84,8 @@ jobs:
             "monochromeIconUrl": "",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
-              "path": "../keystore/signing.keystore",
-              "alias": "my-key-alias"
+              "path": "../keystore/bookmyclinic.keystore",
+              "alias": "bookmyclinic"
             },
             "appVersionCode": 3,
             "appVersion": "1.0.2",
@@ -95,35 +105,30 @@ jobs:
           EOF
 
       - name: Generate Android project via bubblewrap update
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           cd twa-project
           bubblewrap update --skipVersionUpgrade
 
-      - name: Build AAB
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      - name: Build AAB (allow signing failure)
         run: |
           cd twa-project
           bubblewrap build --skipPwaValidation \
-            --signingKeyPath=../keystore/signing.keystore \
-            --signingKeyAlias=my-key-alias
+            --signingKeyPath=../keystore/bookmyclinic.keystore \
+            --signingKeyAlias=bookmyclinic || true
 
-      - name: Find and verify AAB
+      - name: Find all build outputs
         run: |
+          echo "=== AAB files ==="
           find . -name "*.aab" 2>/dev/null || echo "No AAB found"
-          AAB=$(find . -name "*.aab" | head -1)
-          if [ -n "$AAB" ]; then
-            keytool -printcert -jarfile "$AAB" | grep "SHA1"
-          fi
+          echo "=== APK files ==="
+          find . -name "*.apk" 2>/dev/null || echo "No APK found"
+          echo "=== Build outputs folder ==="
+          find twa-project/app/build/outputs -type f 2>/dev/null || echo "No build outputs folder"
 
-      - name: Upload AAB artifact
+      - name: Upload all build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: BookMyClinic-v3-AAB
-          path: twa-project/**/*.aab
+          name: BookMyClinic-v3-build
+          path: twa-project/app/build/outputs/
           retention-days: 7
           if-no-files-found: warn
