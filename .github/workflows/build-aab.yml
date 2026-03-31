@@ -8,8 +8,6 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
-  BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-  BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
 
 jobs:
   build:
@@ -38,18 +36,10 @@ jobs:
       - name: Install Bubblewrap
         run: npm install -g @bubblewrap/cli --prefer-online
 
-      - name: Generate signing keystore
+      - name: Restore PWABuilder keystore from secret
         run: |
           mkdir -p keystore
-          keytool -genkey -v \
-            -keystore keystore/bookmyclinic.keystore \
-            -alias bookmyclinic \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -dname "CN=BookMyClinic Admin, OU=Engineering, O=BookMyClinic, L=Ankleshwar, ST=Gujarat, C=IN"
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore/signing.keystore
 
       - name: Create Bubblewrap config
         run: |
@@ -84,11 +74,11 @@ jobs:
             "monochromeIconUrl": "",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
-              "path": "../keystore/bookmyclinic.keystore",
-              "alias": "bookmyclinic"
+              "path": "../keystore/signing.keystore",
+              "alias": "my-key-alias"
             },
-            "appVersionCode": 2,
-            "appVersion": "1.0.1",
+            "appVersionCode": 3,
+            "appVersion": "1.0.2",
             "shortcuts": [],
             "generatorApp": "bubblewrap-cli",
             "webManifestUrl": "https://bookmyclinics.com/manifest.json",
@@ -105,24 +95,35 @@ jobs:
           EOF
 
       - name: Generate Android project via bubblewrap update
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           cd twa-project
           bubblewrap update --skipVersionUpgrade
 
-      - name: Build AAB non-interactive
+      - name: Build AAB
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           cd twa-project
           bubblewrap build --skipPwaValidation \
-            --signingKeyPath=../keystore/bookmyclinic.keystore \
-            --signingKeyAlias=bookmyclinic
+            --signingKeyPath=../keystore/signing.keystore \
+            --signingKeyAlias=my-key-alias
 
-      - name: Find AAB file
-        run: find . -name "*.aab" 2>/dev/null || echo "No AAB found"
+      - name: Find and verify AAB
+        run: |
+          find . -name "*.aab" 2>/dev/null || echo "No AAB found"
+          AAB=$(find . -name "*.aab" | head -1)
+          if [ -n "$AAB" ]; then
+            keytool -printcert -jarfile "$AAB" | grep "SHA1"
+          fi
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BookMyClinic-v2-AAB
+          name: BookMyClinic-v3-AAB
           path: twa-project/**/*.aab
           retention-days: 7
           if-no-files-found: warn
