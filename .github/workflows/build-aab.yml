@@ -87,8 +87,8 @@ jobs:
               "path": "../keystore/bookmyclinic.keystore",
               "alias": "bookmyclinic"
             },
-            "appVersionCode": 3,
-            "appVersion": "1.0.2",
+            "appVersionCode": 4,
+            "appVersion": "1.0.3",
             "shortcuts": [],
             "generatorApp": "bubblewrap-cli",
             "webManifestUrl": "https://bookmyclinics.com/manifest.json",
@@ -128,7 +128,7 @@ jobs:
       - name: Upload all build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: BookMyClinic-v3-build
+          name: BookMyClinic-v4-build
           path: twa-project/app/build/outputs/
           retention-days: 7
           if-no-files-found: warn
